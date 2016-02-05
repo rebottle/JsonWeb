@@ -1,3 +1,2 @@
-from jsonweb.decode import loader, from_object
-from jsonweb.encode import dumper, to_object
-
+from .decode import loader, from_object
+from .encode import dumper, to_object

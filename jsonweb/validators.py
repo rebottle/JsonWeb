@@ -2,10 +2,10 @@
 import inspect
 import re
 from datetime import datetime
-from jsonweb import encode
+from . import encode
 
-from jsonweb.py3k import basestring, items
-from jsonweb.exceptions import JsonWebError
+from .py3k import basestring, items
+from .exceptions import JsonWebError
 
 
 class _Errors(object):

@@ -9,7 +9,7 @@ For example if you do something like this ::
         "last_name": "Adams"
     }
     ''')
-    
+
 it would be pretty cool if instead of ``person`` being a :class:`dict` it was
 an instance of a class we defined called :class:`Person`. Luckily the python
 standard :mod:`json` module provides support for *class hinting* in the form
@@ -49,11 +49,11 @@ detailed explanation.
 import inspect
 import json
 from contextlib import contextmanager
-from jsonweb.py3k import items
+from .py3k import items
 
-from jsonweb.validators import EnsureType
-from jsonweb.exceptions import JsonWebError
-from jsonweb._local import LocalStack
+from .validators import EnsureType
+from .exceptions import JsonWebError
+from ._local import LocalStack
 
 _DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
@@ -84,7 +84,7 @@ class ObjectAttributeError(ObjectDecodeError):
         ObjectDecodeError.__init__(
             self,
             "Missing {0} attribute for {1}.".format(attr, obj_type),
-            obj_type=obj_type, 
+            obj_type=obj_type,
             attribute=attr
         )
 
@@ -102,18 +102,18 @@ class JsonWebObjectHandler(object):
     def __init__(self, args, kw_args=None):
         self.args = args
         self.kw_args = kw_args
-        
+
     def __call__(self, cls, obj):
         cls_args = []
         cls_kw_args = {}
-        
+
         for arg in self.args:
             cls_args.append(obj[arg])
-            
+
         if self.kw_args:
             for key, default in self.kw_args:
                 cls_kw_args[key] = obj.get(key, default)
-        
+
         return cls(*cls_args, **cls_kw_args)
 
 
@@ -121,38 +121,38 @@ class _ObjectHandlers(object):
     def __init__(self):
         self.__handlers = {}
         self.__deferred_updates = {}
-        
+
     def add_handler(self, cls, handler, type_name=None, schema=None):
         name = type_name or cls.__name__
         self.__handlers[name] = self.__merge_tuples(
-            self.__deferred_updates.get(name, (None,)*3),            
+            self.__deferred_updates.get(name, (None,)*3),
             (handler, cls, schema)
         )
-        
+
     def get(self, name):
         """
         Get a handler tuple. Return None if no such handler.
         """
         return self.__handlers.get(name)
-    
+
     def set(self, name, handler_tuple):
         """
         Add a handler tuple (handler, cls, schema)
         """
         self.__handlers[name] = handler_tuple
-    
+
     def clear(self):
         self.__handlers = {}
         self.__deferred_updates = {}
-        
+
     def update_handler(self, name, cls=None, handler=None, schema=None):
         """
-        Modify cls, handler and schema for a decorated class. 
+        Modify cls, handler and schema for a decorated class.
         """
         handler_tuple = self.__handlers[name]
-        self.set(name, self.__merge_tuples((handler, cls, schema), 
+        self.set(name, self.__merge_tuples((handler, cls, schema),
                                            handler_tuple))
-                 
+
     def update_handler_deferred(self, name, cls=None,
                                 handler=None, schema=None):
         """
@@ -167,26 +167,26 @@ class _ObjectHandlers(object):
         d = self.__deferred_updates.get(name, (None,)*3)
         self.__deferred_updates[name] = self.__merge_tuples(
             (handler, cls, schema), d)
-        
+
     def copy(self):
         handler_copy = _ObjectHandlers()
         [handler_copy.set(n, t) for n, t in self]
         return handler_copy
-    
+
     def __merge_tuples(self, a_tuple, b_tuple):
         """
         "Merge" two tuples of the same length. a takes precedence over b.
-        """        
+        """
         if len(a_tuple) != len(b_tuple):
             raise ValueError("Iterators differ in length.")
         return tuple([(a or b) for a, b in zip(a_tuple, b_tuple)])
-    
+
     def __contains__(self, handler_name):
         return handler_name in self.__handlers
-    
+
     def __getitem__(self, handler):
         return self.__handlers[handler]
-    
+
     def __iter__(self):
         for name, handler_tuple in items(self.__handlers):
             yield name, handler_tuple
@@ -202,9 +202,9 @@ class ObjectHook(object):
     def __init__(self, handlers, validate=True):
         self.handlers = handlers
         self.validate = validate
-            
+
     def decode_obj(self, obj):
-        """        
+        """
         This method is called for every dict decoded in a json string. The
         presence of the key ``__type__`` in ``obj`` will trigger a lookup in
         ``self.handlers``. If a handler is not found for ``__type__`` then an
@@ -215,39 +215,39 @@ class ObjectHook(object):
         """
         if "__type__" not in obj:
             return obj
-        
+
         obj_type = obj["__type__"]
         try:
             factory, cls, schema = self.handlers[obj_type]
         except KeyError:
             raise ObjectNotFoundError(obj_type)
-                
+
         if schema and self.validate:
             obj = schema().validate(obj)
         try:
             return factory(cls, obj)
         except KeyError as e:
             raise ObjectAttributeError(obj_type, e.args[0])
-        
+
 
 def get_arg_spec(func):
     arg_spec = inspect.getargspec(func)
     args = arg_spec.args
-    
-    try:   
+
+    try:
         if args[0] == "self":
             del args[0]
     except IndexError:
         pass
-    
+
     if not args:
-        return None    
-    
+        return None
+
     kw_args = []
     if arg_spec.defaults:
         for default in reversed(arg_spec.defaults):
             kw_args.append((args.pop(), default))
-        
+
     return args, kw_args
 
 
@@ -267,7 +267,7 @@ def from_object(handler=None, type_name=None, schema=None):
     """
     Decorating a class with :func:`from_object` will allow :func:`json.loads`
     to return instances of that class.
-    
+
     ``handler`` is a callable that should return your class instance. It
     receives two arguments, your class and a python dict. Here is an
     example::
@@ -279,7 +279,7 @@ def from_object(handler=None, type_name=None, schema=None):
         ...        obj["last_name"]
         ...    )
         ...
-        >>> @from_object(person_decoder)        
+        >>> @from_object(person_decoder)
         ... class Person(object):
         ...     def __init__(self, first_name, last_name):
         ...         self.first_name
@@ -291,37 +291,37 @@ def from_object(handler=None, type_name=None, schema=None):
         <Person object at 0x1007d7550>
         >>> person.first_name
         'Shawn'
-        
+
     The ``__type__`` key is very important. Without it :mod:`jsonweb` would
     not know which handler to delegate the python dict to. By default
     :func:`from_object` assumes ``__type__`` will be the class's ``__name__``
     attribute. You can specify your own value by setting the ``type_name``
     keyword argument ::
-    
+
         @from_object(person_decoder, type_name="PersonObject")
-        
+
     Which means the json string would need to be modified to look like this::
-    
+
         '{"__type__": "PersonObject", "first_name": "Shawn", "last_name": "Adams"}'
-        
+
     If a handler cannot be found for ``__type__`` an exception is raised ::
 
         >>> luke = loader('{"__type__": "Jedi", "name": "Luke"}')
         Traceback (most recent call last):
             ...
         ObjectNotFoundError: Cannot decode object Jedi. No such object.
-        
+
     You may have noticed that ``handler`` is optional. If you do not specify
     a ``handler`` :mod:`jsonweb` will attempt to generate one. It will
     inspect your class's ``__init__`` method. Any positional arguments will
     be considered required while keyword arguments will be optional.
-    
+
     .. warning::
-    
+
         A handler cannot be generated from a method signature containing only
         ``*args`` and ``**kwargs``. The handler would not know which keys to
         pull out of the python dict.
-    
+
     Lets look at a few examples::
 
         >>> from jsonweb import from_object
@@ -334,19 +334,19 @@ def from_object(handler=None, type_name=None, schema=None):
 
         >>> person_json = '{"__type__": "Person", "first_name": "Shawn", "last_name": "Adams", "gender": "male"}'
         >>> person = loader(person_json)
-        
+
     What happens if we dont want to specify ``gender``::
-            
+
         >>> person_json = '''{
-        ...     "__type__": "Person", 
-        ...     "first_name": "Shawn", 
+        ...     "__type__": "Person",
+        ...     "first_name": "Shawn",
         ...     "last_name": "Adams"
         ... }'''
         >>> person = loader(person_json)
         Traceback (most recent call last):
-            ...        
+            ...
         ObjectAttributeError: Missing gender attribute for Person.
-        
+
     To make ``gender`` optional it must be a keyword argument::
 
         >>> from jsonweb import from_object
@@ -356,13 +356,13 @@ def from_object(handler=None, type_name=None, schema=None):
         ...         self.first_name = first_name
         ...         self.last_name = last_name
         ...         self.gender = gender
-        
+
         >>> person_json = '{"__type__": "Person", "first_name": "Shawn", "last_name": "Adams"}'
         >>> person = loader(person_json)
         >>> print person.gender
         None
-  
-    You can specify a json validator for a class with the ``schema`` keyword agrument. 
+
+    You can specify a json validator for a class with the ``schema`` keyword agrument.
     Here is a quick example::
 
         >>> from jsonweb import from_object
@@ -386,7 +386,7 @@ def from_object(handler=None, type_name=None, schema=None):
         ... except ValidationError, e:
         ...     print e.errors["first_name"].message
         Expected str got int instead.
-    
+
     Schemas are useful for validating user supplied json in web services or
     other web applications. For a detailed explanation on using schemas see
     the :mod:`jsonweb.schema`.
@@ -408,7 +408,7 @@ def object_hook(handlers=None, as_type=None, validate=True):
     If you need to decode a JSON string that does not contain a ``__type__``
     key and you know that the JSON represents a certain object or list of
     objects you can use ``as_type`` to specify it ::
-    
+
         >>> json_str = '{"first_name": "bob", "last_name": "smith"}'
         >>> loader(json_str, as_type="Person")
         <Person object at 0x1007d7550>
@@ -419,35 +419,35 @@ def object_hook(handlers=None, as_type=None, validate=True):
         ... ]'''
         >>> loader(json_str, as_type="Person")
         [<Person object at 0x1007d7550>, <Person object at 0x1007d7434>]
-        
+
     .. note::
-    
-        Assumes every object WITHOUT a ``__type__``  kw is of 
+
+        Assumes every object WITHOUT a ``__type__``  kw is of
         the type specified by ``as_type`` .
-         
+
     ``handlers`` is a dict with this format::
-    
+
         {"Person": {"cls": Person, "handler": person_decoder, "schema": PersonSchema)}
-        
+
     If you do not wish to decorate your classes with :func:`from_object` you
     can specify the same parameters via the ``handlers`` keyword argument.
     Here is an example::
-        
+
         >>> class Person(object):
         ...    def __init__(self, first_name, last_name):
         ...        self.first_name = first_name
         ...        self.last_name = last_name
-        ...        
+        ...
         >>> def person_decoder(cls, obj):
         ...    return cls(obj["first_name"], obj["last_name"])
-            
+
         >>> handlers = {"Person": {"cls": Person, "handler": person_decoder}}
         >>> person = loader(json_str, handlers=handlers)
         >>> # Or invoking the object_hook interface ourselves
         >>> person = json.loads(json_str, object_hook=object_hook(handlers))
-        
-    .. note:: 
-    
+
+    .. note::
+
         If you decorate a class with :func:`from_object` you can override the
         ``handler`` and ``schema`` values later. Here is an example of
         overriding a schema you defined with :func:`from_object` (some code
@@ -457,20 +457,20 @@ def object_hook(handlers=None, as_type=None, validate=True):
             >>> @from_object(schema=PersonSchema)
             >>> class Person(object):
                 ...
-                
+
             >>> # and later on in the code...
             >>> handlers = {"Person": {"schema": NewPersonSchema}}
             >>> person = loader(json_str, handlers=handlers)
-            
+
     If you need to use ``as_type`` or ``handlers`` many times in your code
     you can forgo using :func:`loader` in favor of configuring a "custom"
     object hook callable. Here is an example ::
-                
+
         >>> my_obj_hook = object_hook(handlers)
         >>> # this call uses custom handlers
         >>> person = json.loads(json_str, object_hook=my_obj_hook)
         >>> # and so does this one ...
-        >>> another_person = json.loads(json_str, object_hook=my_obj_hook)                                
+        >>> another_person = json.loads(json_str, object_hook=my_obj_hook)
     """
     if handlers:
         _object_handlers = _default_object_handlers.copy()
@@ -484,7 +484,7 @@ def object_hook(handlers=None, as_type=None, validate=True):
                 )
     else:
         _object_handlers = _default_object_handlers
-               
+
     decode = ObjectHook(_object_handlers, validate)
 
     def handler(obj):
@@ -500,32 +500,32 @@ def loader(json_str, **kw):
     Call this function as you would call :func:`json.loads`. It wraps the
     :ref:`object_hook` interface and returns python class instances from JSON
     strings.
-    
+
     :param ensure_type: Check that the resulting object is of type
-        ``ensure_type``. Raise a ValidationError otherwise.          
-    :param handlers: is a dict of handlers. see :func:`object_hook`.    
+        ``ensure_type``. Raise a ValidationError otherwise.
+    :param handlers: is a dict of handlers. see :func:`object_hook`.
     :param as_type: explicitly specify the type of object the JSON
-        represents. see :func:`object_hook`    
+        represents. see :func:`object_hook`
     :param validate: Set to False to turn off validation (ie dont run the
-        schemas) during this load operation. Defaults to True.    
+        schemas) during this load operation. Defaults to True.
     :param kw: the rest of the kw args will be passed to the underlying
         :func:`json.loads` calls.
-    
-    
+
+
     """
     kw["object_hook"] = object_hook(
         kw.pop("handlers", None),
         kw.pop("as_type", None),
         kw.pop("validate", True)
     )
-    
+
     ensure_type = kw.pop("ensure_type", _as_type_context.top)
-    
+
     try:
         obj = json.loads(json_str, **kw)
     except ValueError as e:
         raise JsonDecodeError(e.args[0])
-    
+
     if ensure_type:
         return EnsureType(ensure_type).validate(obj)
     return obj
@@ -538,24 +538,24 @@ def ensure_type(cls):
     :func:`loader` calls made in the active context. This will allow a
     :class:`~jsonweb.schema.ValidationError` to bubble up from the underlying
     :func:`loader` call if the resultant type is not of type ``ensure_type``.
-    
+
     Here is an example ::
-            
+
         # example_app.model.py
         from jsonweb.decode import from_object
         # import db model stuff
         from example_app import db
-        
+
         @from_object()
         class Person(db.Base):
             first_name = db.Column(String)
             last_name = db.Column(String)
-            
+
             def __init__(self, first_name, last_name):
                 self.first_name = first_name
                 self.last_name = last_name
 
-                
+
         # example_app.__init__.py
         from example_app.model import session, Person
         from jsonweb.decode import from_object, ensure_type
@@ -565,14 +565,14 @@ def ensure_type(cls):
         app.errorhandler(ValidationError)
         def json_validation_error(e):
             return json_response({"error": e})
-            
-            
+
+
         def load_request_json():
             if request.headers.get('content-type') == 'application/json':
                 return loader(request.data)
             abort(400)
-            
-            
+
+
         @app.route("/person", methods=["POST", "PUT"])
         def add_person():
             with ensure_type(Person):
@@ -580,10 +580,10 @@ def ensure_type(cls):
             session.add(person)
             session.commit()
             return "ok"
-            
-        
+
+
     The above example is pretty contrived. We could have just made ``load_json_request``
-    accept an ``ensure_type`` kw, but imagine if the call to :func:`loader` was burried 
+    accept an ``ensure_type`` kw, but imagine if the call to :func:`loader` was burried
     deeper in our api and such a thing was not possible.
     """
     _as_type_context.push(cls)
