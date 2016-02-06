@@ -199,9 +199,11 @@ class ObjectHook(object):
     directly. :func:`object_hook` is responsible for instantiating and using it.
     """
 
-    def __init__(self, handlers, validate=True):
+    def __init__(self, handlers, validate=True,baseHook=None):
         self.handlers = handlers
         self.validate = validate
+        self.baseHook = baseHook
+
 
     def decode_obj(self, obj):
         """
@@ -213,7 +215,14 @@ class ObjectHook(object):
         was supplied for the class, ``obj`` will first be validated then passed
         to handler. The handler should return a new python instant of type ``__type__``.
         """
-        if "__type__" not in obj:
+        if isinstance(obj,list):
+            dobj=dict(obj)
+            if "__type__" not in dobj:
+                return self.baseHook(obj)
+            obj=dobj
+        elif "__type__" not in obj:
+            if self.baseHook:
+                return self.baseHook(obj)
             return obj
 
         obj_type = obj["__type__"]
@@ -399,7 +408,8 @@ def from_object(handler=None, type_name=None, schema=None):
     return wrapper
 
 
-def object_hook(handlers=None, as_type=None, validate=True):
+def object_hook(handlers=None, as_type=None, validate=True
+                , baseHook=None):
     """
     Wrapper around :class:`ObjectHook`. Calling this function will configure
     an instance of :class:`ObjectHook` and return a callable suitable for
@@ -485,7 +495,7 @@ def object_hook(handlers=None, as_type=None, validate=True):
     else:
         _object_handlers = _default_object_handlers
 
-    decode = ObjectHook(_object_handlers, validate)
+    decode = ObjectHook(_object_handlers, validate, baseHook)
 
     def handler(obj):
         if as_type and "__type__" not in obj:
@@ -513,10 +523,13 @@ def loader(json_str, **kw):
 
 
     """
-    kw["object_hook"] = object_hook(
+    baseword="object_pairs_hook"
+    hookword= baseword if baseword in kw else "object_hook"
+    kw[hookword] = object_hook(
         kw.pop("handlers", None),
         kw.pop("as_type", None),
-        kw.pop("validate", True)
+        kw.pop("validate", True),
+        kw.pop(baseword, kw.pop("object_hook", None))
     )
 
     ensure_type = kw.pop("ensure_type", _as_type_context.top)
