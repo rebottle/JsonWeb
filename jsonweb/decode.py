@@ -199,10 +199,10 @@ class ObjectHook(object):
     directly. :func:`object_hook` is responsible for instantiating and using it.
     """
 
-    def __init__(self, handlers, validate=True,baseHook=None):
+    def __init__(self, handlers, validate=True, base_hook=None):
         self.handlers = handlers
         self.validate = validate
-        self.baseHook = baseHook
+        self.baseHook = base_hook
 
 
     def decode_obj(self, obj):
